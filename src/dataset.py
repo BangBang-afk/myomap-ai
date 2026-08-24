@@ -26,27 +26,45 @@ except ImportError:
 
 LABEL_NAMES = ["ACL","MCL","MedialMeniscus","LateralMeniscus","MedialOA","LateralOA","PatellofemoralOA","Effusion","Synovitis","BakerCyst","Contusion","Fracture"]
 
-KAGGLE_INPUT = "/kaggle/input/rsna-knee-abnormality-detection"
+KAGGLE_INPUT_CANDIDATES = [
+    "/kaggle/input/rsna-knee-abnormality-detection",
+    "/kaggle/input/rsna-knee-mri",
+    "/kaggle/input/datasets",
+]
 
 def resolve_data_root(config_path: str = None) -> Path:
-    if os.path.exists(KAGGLE_INPUT):
-        return Path(KAGGLE_INPUT)
+    for cand in KAGGLE_INPUT_CANDIDATES:
+        if os.path.exists(cand):
+            # search for train.csv under cand to find true root
+            hits = list(Path(cand).rglob("train.csv"))
+            if hits:
+                # return parent containing train.csv
+                return hits[0].parent
+            # also check if cand itself contains data
+            if list(Path(cand).rglob("*.dcm")) or list(Path(cand).glob("*.csv")):
+                return Path(cand)
     # local sibling to mediorch
     here = Path(__file__).resolve().parents[1]
     return here / "data" / "raw"
 
 def load_meta(root: Path) -> pd.DataFrame:
-    # try common Kaggle file names
-    for name in ["train.csv","train_folds.csv","train_folds_with_pseudo.csv","metadata.csv"]:
-        p = root / name
-        if p.exists():
-            return pd.read_csv(p)
-        # also search recursively
-        found = list(root.rglob(name))
-        if found:
-            return pd.read_csv(found[0])
+    # try common Kaggle file names — search broadly under /kaggle/input
+    search_roots = [root, Path("/kaggle/input")]
+    for search_root in search_roots:
+        if not search_root.exists():
+            continue
+        for name in ["train.csv","train_folds.csv","train_folds_with_pseudo.csv","metadata.csv"]:
+            found = list(search_root.rglob(name))
+            if found:
+                print(f"[dataset] found {found[0]}")
+                try:
+                    return pd.read_csv(found[0])
+                except Exception as e:
+                    print(f"read failed {e}")
+                    continue
     # fallback empty with expected cols
-    print(f"[dataset] no train.csv found under {root}, return empty meta (mock mode)")
+    print(f"[dataset] no train.csv found under {root} nor /kaggle/input, return empty meta (mock mode)")
+    print(f"  hint: Add competition data via Kaggle -> Add Input -> RSNA Knee Abnormality Detection")
     return pd.DataFrame(columns=["StudyInstanceUID"] + LABEL_NAMES + ["report_text"])
 
 def dicom_to_array(dcm_path: str) -> np.ndarray:
@@ -173,7 +191,10 @@ class KneeDataset(Dataset):
         # tokenization deferred to text_proc if tokenizer provided
         item = {"study_uid": study_uid, "clips": clips_tensor, "planes": planes[:8], "labels": labels, "report": report}
         if self.tokenizer is not None:
-            from .text_proc import tokenize_report
+            try:
+                from .text_proc import tokenize_report
+            except ImportError:
+                from text_proc import tokenize_report
             tok = tokenize_report(report, self.tokenizer, self.max_len)
             # keep tensors
             for k in ["input_ids","attention_mask"]:

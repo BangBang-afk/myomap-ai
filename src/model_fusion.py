@@ -11,8 +11,12 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-from .model_image import ImageBackbone
-from .model_text import TextBranch
+try:
+    from .model_image import ImageBackbone
+    from .model_text import TextBranch
+except ImportError:
+    from model_image import ImageBackbone
+    from model_text import TextBranch
 
 PLANE_PRIORS = {
     # rough priors per label: sag, cor, axial
