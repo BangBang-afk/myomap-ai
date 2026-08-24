@@ -1,0 +1,68 @@
+# MyoMap AI — RSNA Knee Abnormality Detection 2026
+# 12-label multi-label classification, multimodal (MRI + XLM-R)
+
+# Paths — auto-switch local vs Kaggle
+kaggle_input: /kaggle/input/rsna-knee-abnormality-detection
+local_data: data/raw
+cache_dir: data/cache
+processed_dir: data/processed
+model_dir: models
+
+seed: 42
+num_labels: 12
+label_names: [ACL, MCL, MedialMeniscus, LateralMeniscus, MedialOA, LateralOA, PatellofemoralOA, Effusion, Synovitis, BakerCyst, Contusion, Fracture]
+
+# Data
+image_size: 256
+num_slices_sample: 16   # per study, uniform sample across series
+slice_channels: 3       # 2.5D: prev, center, next
+use_reports: true
+max_report_len: 256
+kfold: 5
+group_col: StudyInstanceUID
+
+# Augment (albumentations)
+augment: { rotate: 15, hflip: 0.5, brightness_contrast: 0.2, cutout: true }
+
+# Model — image
+backbone: convnextv2_tiny.fcmae  # timm name, fits Kaggle 16GB
+pretrained: true
+embed_dim: 384
+dropout: 0.3
+
+# Model — text
+text_model: xlm-roberta-base
+text_embed_dim: 768
+text_dropout: 0.2
+freeze_text_epochs: 1
+
+# Fusion
+fusion: label_aware_attention  # 12 learned queries + metadata priors
+label_transformer_layers: 2
+label_transformer_heads: 8
+
+# Loss
+loss: asymmetric  # 0.85 ASL + 0.15 ranking
+asl_gamma_pos: 0
+asl_gamma_neg: 4
+asl_clip: 0.05
+ranking_weight: 0.15
+label_weight_clip: [1, 3]
+
+# Training — Kaggle GPU tuned (P100 16GB)
+epochs: 15
+batch_size: 4
+grad_accum: 2        # effective 8
+lr_backbone: 2.0e-5
+lr_heads: 1.0e-4
+weight_decay: 1.0e-4
+scheduler: cosine
+warmup_epochs: 1
+amp: true
+grad_clip: 1.0
+ema_decay: 0.9997
+num_workers: 4
+
+# Inference
+tta: true
+threshold: 0.5  # tuned per label via Youden J on val
