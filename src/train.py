@@ -36,7 +36,8 @@ def get_folds(df, n_splits=5, seed=42):
 
 def train_one_fold(cfg, df, fold=0, device="cuda"):
     print(f"[train] fold {fold} on {device}")
-    tokenizer = get_tokenizer(cfg.get("text_model","xlm-roberta-base")) if cfg.get("use_reports") else None
+    use_text = cfg.get("use_reports", False) and cfg.get("text_model", "none") != "none"
+    tokenizer = get_tokenizer(cfg.get("text_model","xlm-roberta-base")) if use_text else None
     tr_df = df[df["fold"]!=fold]
     va_df = df[df["fold"]==fold]
     if len(va_df)==0: va_df = tr_df.sample(frac=0.1, random_state=cfg["seed"])

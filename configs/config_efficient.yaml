@@ -1,0 +1,57 @@
+# MyoMap AI — Efficient config for RSNA efficiency prize (<50M params, <0.5s)
+# Baseline: convnextv2_tiny (28M) + xlm-roberta-base (277M) ~310M -> heavy
+# Efficient: efficientnet_b0 (5.3M) + no text OR distil (optional) + light fusion
+
+seed: 42
+num_labels: 12
+label_names: [ACL, MCL, MedialMeniscus, LateralMeniscus, MedialOA, LateralOA, PatellofemoralOA, Effusion, Synovitis, BakerCyst, Contusion, Fracture]
+
+image_size: 224  # smaller -> 30% less compute vs 256
+num_slices_sample: 8  # vs 16
+slice_channels: 3
+use_reports: false  # efficient mode: image-only, skip XLM-R (saves 277M)
+max_report_len: 128
+
+kfold: 5
+group_col: StudyInstanceUID
+augment: { rotate: 10, hflip: 0.5, brightness_contrast: 0.15, cutout: false }  # lighter
+
+backbone: efficientnet_b0  # 5.3M vs 28M, timm
+pretrained: true
+embed_dim: 256  # vs 384 -> 33% smaller heads
+dropout: 0.2
+
+text_model: none
+text_embed_dim: 256
+freeze_text_epochs: 0
+
+fusion: label_aware_attention
+label_transformer_layers: 1  # vs 2
+label_transformer_heads: 4  # vs 8
+
+loss: asymmetric
+asl_gamma_pos: 0
+asl_gamma_neg: 4
+asl_clip: 0.05
+ranking_weight: 0.10
+
+epochs: 12  # vs 15
+batch_size: 8  # larger (smaller model fits) vs 4
+grad_accum: 1  # effective 8
+lr_backbone: 3.0e-4  # higher for small model
+lr_heads: 1.0e-3
+weight_decay: 1.0e-4
+scheduler: cosine
+warmup_epochs: 1
+amp: true
+grad_clip: 1.0
+ema_decay: 0.999
+num_workers: 4
+
+tta: false  # disable for speed
+threshold: 0.5
+
+# Efficiency metrics target
+# Params: ~7.5M (efficientnet_b0 5.3M + fusion 2.2M) vs 310M baseline -> 97% reduction
+# Inference: ~0.15s/study on P100 vs 1.2s -> 8x faster
+# Expected AUROC drop: ~0.02-0.03 vs baseline (tradeoff for efficiency prize)
