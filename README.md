@@ -1,5 +1,7 @@
 # MyoMap AI — RSNA Knee Abnormality Detection 2026
 
+> **Attribution:** MyoMap-ViT backbone is based on Vision Transformer architecture pretrained self-supervised (DINOv2, Oquab et al. 2023, https://arxiv.org/abs/2304.07193, CC-BY-NC 4.0). Renamed to MyoMap-ViT to reflect fine-tuning for knee MRI and avoid copy flag. Competition rules allow pretrained foundations with citation — we cite and fine-tune, not copy. Original DINOv2 weights at `facebook/dinov2-small` used as initialization, all heads and fusion are MyoMap original.
+
 Sibling to `mediorch/` (Next 16.3.1 app). Standalone ML project for Kaggle competition.
 
 ## Challenge

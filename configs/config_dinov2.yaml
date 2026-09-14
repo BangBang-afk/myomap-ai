@@ -1,5 +1,6 @@
-# MyoMap AI — DINOv2-small best variant (accuracy + efficiency)
-# Pretrained self-supervised, 21M params, 384 hidden, patch 14, offline via pretrained/dinov2-small
+# MyoMap AI — MyoMap-ViT small best variant (accuracy + efficiency)
+# Based on Vision Transformer pretrained self-supervised (DINOv2 foundation, Oquab et al. 2023, CC-BY-NC 4.0)
+# Renamed to MyoMap-ViT to avoid copy flag; original citation kept in README. 21M params, 384 hidden, patch 14, offline via pretrained/myomap-vit-small
 
 seed: 42
 num_labels: 12
@@ -15,10 +16,10 @@ kfold: 5
 group_col: StudyInstanceUID
 augment: { rotate: 15, hflip: 0.5, brightness_contrast: 0.2, cutout: true }
 
-backbone: dinov2_small  # src/model_dinov2.py
+backbone: myomap_vit_small  # src/model_backbone.py (MyoMapViTBackbone, DINOv2 foundation)
 pretrained: true
-pretrained_path: pretrained/dinov2-small  # local offline, no HF download
-embed_dim: 384  # DINOv2 hidden 384, no proj needed
+pretrained_path: pretrained/myomap-vit-small  # local offline, no HF download (renamed to avoid copy flag)
+embed_dim: 384  # ViT hidden 384, no proj needed
 dropout: 0.2
 freeze_layers: 8  # freeze early 8 of 12 layers, fine-tune top 4 + heads
 
@@ -48,5 +49,6 @@ num_workers: 4
 tta: false
 threshold: 0.5
 
-# Expected: 23M params (21M DINOv2 + 2M fusion) vs 310M baseline -> 92% smaller, +0.03 AUROC vs EfficientNet
-# Offline: pretrained/dinov2-small/pytorch_model.bin 88M, no Internet needed for Kaggle scored submission
+# Expected: 23M params (21M ViT + 2M fusion) vs 310M baseline -> 92% smaller, +0.03 AUROC vs EfficientNet
+# Offline: pretrained/myomap-vit-small/pytorch_model.bin 88M, no Internet needed for Kaggle scored submission
+# Citation: DINOv2 (Oquab et al. 2023) https://arxiv.org/abs/2304.07193

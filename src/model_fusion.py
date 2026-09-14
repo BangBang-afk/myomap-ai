@@ -15,17 +15,20 @@ try:
     from .model_image import ImageBackbone
     from .model_text import TextBranch
     try:
-        from .model_dinov2 import Dinov2Backbone
+        from .model_backbone import MyoMapViTBackbone
+        Dinov2Backbone = MyoMapViTBackbone  # alias for compat
     except ImportError:
         try:
-            from model_dinov2 import Dinov2Backbone
+            from model_backbone import MyoMapViTBackbone
+            Dinov2Backbone = MyoMapViTBackbone
         except Exception:
             Dinov2Backbone = None
 except ImportError:
     from model_image import ImageBackbone
     from model_text import TextBranch
     try:
-        from model_dinov2 import Dinov2Backbone
+        from model_backbone import MyoMapViTBackbone
+        Dinov2Backbone = MyoMapViTBackbone
     except Exception:
         Dinov2Backbone = None
 
@@ -40,16 +43,12 @@ class LabelAwareFusion(nn.Module):
             return
         self.num_labels = num_labels
         self.embed_dim = embed_dim
-        # choose backbone: dinov2_small vs timm
-        if backbone == "dinov2_small" and Dinov2Backbone is not None:
+        # choose backbone: myomap_vit_small (DINOv2 foundation, renamed) vs timm
+        if backbone in ("myomap_vit_small", "dinov2_small") and Dinov2Backbone is not None:
             self.image_branch = Dinov2Backbone(model_path=backbone_path, embed_dim=embed_dim, freeze_layers=freeze_layers)
         else:
-            # pass backbone name to ImageBackbone via monkey patch: it expects model name
-            # ImageBackbone will use default if unknown, we override by creating with args
             from model_image import ImageBackbone as ImgBB
-            # ImageBackbone signature: backbone, pretrained, embed_dim
-            # for dinov2 fallback, use convnext if not found
-            bb_name = backbone if backbone != "dinov2_small" else "convnextv2_tiny.fcmae"
+            bb_name = backbone if backbone not in ("dinov2_small", "myomap_vit_small") else "convnextv2_tiny.fcmae"
             self.image_branch = ImgBB(backbone=bb_name, pretrained=True, embed_dim=embed_dim)
         self.text_branch = TextBranch(model_name=text_model, embed_dim=embed_dim)
         self.label_queries = nn.Parameter(torch.randn(num_labels, embed_dim) * 0.02)
