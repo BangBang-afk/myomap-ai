@@ -47,7 +47,7 @@ def train_one_fold(cfg, df, fold=0, device="cuda"):
     tr_loader = DataLoader(tr_ds, batch_size=cfg["batch_size"], shuffle=True, num_workers=cfg["num_workers"], pin_memory=True)
     va_loader = DataLoader(va_ds, batch_size=cfg["batch_size"], shuffle=False, num_workers=cfg["num_workers"], pin_memory=True)
 
-    model = LabelAwareFusion(num_labels=cfg["num_labels"], embed_dim=cfg["embed_dim"], text_model=cfg["text_model"], transformer_layers=cfg["label_transformer_layers"], heads=cfg["label_transformer_heads"]).to(device)
+    model = LabelAwareFusion(num_labels=cfg["num_labels"], embed_dim=cfg["embed_dim"], text_model=cfg.get("text_model","xlm-roberta-base"), transformer_layers=cfg["label_transformer_layers"], heads=cfg["label_transformer_heads"], backbone=cfg.get("backbone","convnextv2_tiny.fcmae"), backbone_path=cfg.get("pretrained_path", None), freeze_layers=cfg.get("freeze_layers",0)).to(device)
     # differential LR: backbone lower
     bb_params = list(model.image_branch.parameters())
     other = [p for n,p in model.named_parameters() if not n.startswith("image_branch")]
